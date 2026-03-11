@@ -1,0 +1,16 @@
+name: generic-cpu
+description: Use CPU, small memory footprint
+vendor: Jane Doe
+grade: stable
+devices:
+  anyof:
+    - type: cpu
+      architecture: amd64
+memory: 80G
+disk-space: 100G
+components:
+  - pytorch
+  - model-openvla-7b-shard-1-of-4
+  - model-openvla-7b-shard-2-of-4
+  - model-openvla-7b-shard-3-of-4
+  - model-openvla-7b-shard-4-of-4
