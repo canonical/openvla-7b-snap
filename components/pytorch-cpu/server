@@ -1,0 +1,14 @@
+#!/bin/bash -eux
+
+# Get the port from modelctl
+PORT="$(modelctl get http.port)"
+
+if [[ ! -f "$INTERFACE_SERVER" ]]; then
+  echo "Interface server entrypoint not found: $INTERFACE_SERVER"
+  exit 1
+fi
+
+exec "$SNAP_COMPONENTS/pytorch-cpu/bin/python3" "$INTERFACE_SERVER" \
+  --model_path "$MODEL_FILE" \
+  --port "$PORT" \
+  --device "cpu" \

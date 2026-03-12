@@ -33,7 +33,8 @@ parts:
     plugin: dump
     source: components
     organize:
-      "pytorch": (component/pytorch)
+      "pytorch-cpu": (component/pytorch-cpu)
+      "pytorch-cuda": (component/pytorch-cuda)
       "fastapi-server-interface": (component/fastapi-server-interface)
       "xvla-server-interface": (component/xvla-server-interface)
     prime:
@@ -76,9 +77,11 @@ parts:
           echo "# No config" > "$shard_prime/component.yaml"
         fi
       done
-  pytorch-runtime:
+  pytorch-runtime-cpu:
     plugin: python
     source: .
+    build-environment:
+      - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
     python-packages:
       - torch>=2.2.0
       - torchvision>=0.16.0
@@ -94,6 +97,30 @@ parts:
     # Ensure we have the base C++ libraries for math
     stage-packages:
       - libgomp1
+    organize:
+      "*": "(component/pytorch-cpu)/"
+  pytorch-runtime-cuda:
+    plugin: python
+    source: .
+    build-environment:
+      - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu130
+    python-packages:
+      - torch>=2.2.0
+      - torchvision>=0.16.0
+      - transformers==4.40.1
+      - timm==0.9.10
+      - tokenizers==0.19.1
+      - fastapi
+      - uvicorn
+      - pillow
+      - accelerate
+      - python-multipart
+      - json-numpy
+    # Ensure we have the base C++ libraries for math
+    stage-packages:
+      - libgomp1
+    organize:
+      "*": "(component/pytorch-cuda)/"
   engines:
     source: engines
     plugin: dump
@@ -149,10 +176,15 @@ components:
     summary: OpenVLA 7B model weights (shard 4 of 4)
     description: OpenVLA model with 7B parameters in safetensor format (shard 4 of 4)
 
-  pytorch:
+  pytorch-cpu:
     type: standard
-    summary: PyTorch HTTP server
-    description: Running VLAs using PyTorch and FastAPI
+    summary: PyTorch CPU runtime
+    description: Inference runtime for OpenVLA using PyTorch (CPU-only)
+
+  pytorch-cuda:
+    type: standard
+    summary: PyTorch CUDA runtime
+    description: Inference runtime for OpenVLA using PyTorch (CUDA)
 
   fastapi-server-interface:
     type: standard

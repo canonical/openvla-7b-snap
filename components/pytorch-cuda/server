@@ -8,7 +8,7 @@ if [[ ! -f "$INTERFACE_SERVER" ]]; then
   exit 1
 fi
 
-exec python3 "$INTERFACE_SERVER" \
+exec "$SNAP_COMPONENTS/pytorch-cuda/bin/python3" "$INTERFACE_SERVER" \
   --model_path "$MODEL_FILE" \
   --port "$PORT" \
-  --device "cpu" \
+  --device "cuda" \

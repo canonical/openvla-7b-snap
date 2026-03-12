@@ -2,4 +2,4 @@
 
 $SNAP_COMPONENTS/model-openvla-7b-shard-1-of-4/init
 
-exec "$SNAP_COMPONENTS/pytorch/server"
+exec "$SNAP_COMPONENTS/pytorch-cpu/server"
