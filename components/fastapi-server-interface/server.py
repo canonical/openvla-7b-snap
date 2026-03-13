@@ -11,7 +11,6 @@ model = None
 processor = None
 model_ready = False
 
-# 1. Start-up: Load the 15GB model into RAM once
 @app.on_event("startup")
 def load_vla():
     global model, processor, model_ready
@@ -36,17 +35,14 @@ def ready():
     from fastapi import Response
     return Response(status_code=503, content='{"ready": false}', media_type="application/json")
 
-# 2. The Inference Endpoint
 @app.post("/act")
 async def predict_action(text: str = Form(...), image: UploadFile = File(...)):
     # Convert uploaded bytes to a PIL Image
     image_bytes = await image.read()
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-    # Format the prompt for OpenVLA
     prompt = f"In: {text}\nOut:"
 
-    # Prepare inputs
     inputs = processor(prompt, img).to(args.device, dtype=torch.bfloat16)
 
     # Predict the action (X, Y, Z, Roll, Pitch, Yaw, Gripper)

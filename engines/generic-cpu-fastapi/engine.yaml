@@ -1,6 +1,6 @@
 name: generic-cpu-fastapi
 description: Use CPU, small memory footprint
-vendor: Jane Doe
+vendor: Canonical Ltd
 grade: stable
 devices:
   anyof:

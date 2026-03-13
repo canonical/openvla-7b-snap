@@ -1,13 +1,13 @@
 name: generic-cpu-xvla
 description: Use CPU, small memory footprint
-vendor: Jane Doe
+vendor: Canonical Ltd
 grade: stable
 devices:
   anyof:
     - type: cpu
       architecture: amd64
 memory: 30G
-disk-space: 20G
+disk-space: 50G
 components:
   - xvla-server-interface
   - pytorch-cpu

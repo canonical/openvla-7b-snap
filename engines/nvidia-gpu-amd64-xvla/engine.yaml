@@ -10,7 +10,7 @@ devices:
       vendor-id: 0x10de # Nvidia Corporation
       vram: 16384M
 memory: 30G
-disk-space: 20G
+disk-space: 50G
 components:
   - xvla-server-interface
   - pytorch-cuda
