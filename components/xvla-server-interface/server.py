@@ -1,25 +1,33 @@
 import argparse
+import contextlib
 import io
 import json_numpy
 import logging
 import numpy as np
+import os
 import traceback
 import torch
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
 from PIL import Image
 from transformers import AutoModelForVision2Seq, AutoProcessor
 
 
-app = FastAPI()
+parser = argparse.ArgumentParser()
+parser.add_argument("--model_path", type=str, default=os.environ.get("MODEL_PATH", ""))
+parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")))
+parser.add_argument("--device", type=str, default=os.environ.get("DEVICE", "cpu"))
+parser.add_argument("--unnorm_key", type=str, default=os.environ.get("UNNORM_KEY", "bridge_orig"))
+args, _ = parser.parse_known_args()
+
 model = None
 processor = None
 model_ready = False
 
 
-@app.on_event("startup")
-def load_vla():
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
     global model, processor, model_ready
     print(f"🚀 Loading OpenVLA from {args.model_path} on {args.device}...")
     processor = AutoProcessor.from_pretrained(args.model_path, trust_remote_code=True)
@@ -31,13 +39,16 @@ def load_vla():
     ).to(args.device)
     model_ready = True
     print("✅ Model loaded and ready for actions.")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/ready")
 def ready():
     if model_ready:
         return {"ready": True}
-    from fastapi import Response
     return Response(status_code=503, content='{"ready": false}', media_type="application/json")
 
 
@@ -79,23 +90,21 @@ def predict_action(payload: dict):
         if "language_instruction" not in payload:
             return JSONResponse({"error": "Missing field: language_instruction"}, status_code=400)
 
-        images = []
-        for key in ("image0", "image1", "image2"):
-            if key not in payload:
-                continue
-            images.append(deserialize_image_payload(payload[key]))
-
-        if not images:
+        if "image0" not in payload:
             return JSONResponse({"error": "No image provided. Include at least image0."}, status_code=400)
 
-        proprio_payload = payload.get("proprio")
-        if proprio_payload is not None:
-            proprio = torch.as_tensor(np.asarray(json_numpy.loads(proprio_payload)))
-        else:
-            proprio = torch.zeros(7, dtype=torch.float32)
+        images = [
+            deserialize_image_payload(payload[key])
+            for key in ("image0", "image1", "image2")
+            if key in payload
+        ]
 
-        domain_id = torch.tensor([int(payload.get("domain_id", 0))], dtype=torch.long)
-        steps = max(1, int(payload.get("steps", 10)))
+        proprio_payload = payload.get("proprio")
+        proprio = (
+            torch.as_tensor(np.asarray(json_numpy.loads(proprio_payload)), dtype=torch.float32)
+            if proprio_payload is not None
+            else None
+        )
 
         device = next(model.parameters()).device
         dtype = next(model.parameters()).dtype
@@ -106,27 +115,21 @@ def predict_action(payload: dict):
             return tensor_value.to(device=device, dtype=dtype) if tensor_value.is_floating_point() else tensor_value.to(device=device)
 
         prompt = f"In: {payload['language_instruction']}\nOut:"
-        inputs = processor(prompt, images[0])
+        inputs = processor(prompt, images if len(images) > 1 else images[0])
         inputs = {key: to_model(value) for key, value in inputs.items()}
 
-        _ = to_model(proprio.unsqueeze(0))
-        _ = domain_id.to(device)
-        _ = steps
+        extra_kwargs = {}
+        if proprio is not None:
+            extra_kwargs["proprio"] = to_model(proprio.unsqueeze(0))
 
         with torch.inference_mode():
-            action = model.predict_action(**inputs, unnorm_key="bridge_orig", do_sample=False)
+            action = model.predict_action(**inputs, unnorm_key=args.unnorm_key, do_sample=False, **extra_kwargs)
 
         return JSONResponse({"action": action.float().cpu().numpy().tolist()})
     except Exception:
         logging.error(traceback.format_exc())
-        return JSONResponse({"error": "Request failed"}, status_code=400)
+        return JSONResponse({"error": "Internal server error"}, status_code=500)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, required=True)
-    parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--device", type=str, default="cpu")
-    args = parser.parse_args()
-
     uvicorn.run(app, host="0.0.0.0", port=args.port)
