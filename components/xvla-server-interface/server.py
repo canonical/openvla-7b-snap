@@ -118,14 +118,27 @@ def predict_action(payload: dict):
         inputs = processor(prompt, images if len(images) > 1 else images[0])
         inputs = {key: to_model(value) for key, value in inputs.items()}
 
-        extra_kwargs = {}
-        if proprio is not None:
-            extra_kwargs["proprio"] = to_model(proprio.unsqueeze(0))
-
         with torch.inference_mode():
-            action = model.predict_action(**inputs, unnorm_key=args.unnorm_key, do_sample=False, **extra_kwargs)
+            try:
+                if proprio is not None:
+                    action = model.predict_action(
+                        **inputs,
+                        unnorm_key=args.unnorm_key,
+                        do_sample=False,
+                        proprio=to_model(proprio.unsqueeze(0)),
+                    )
+                else:
+                    action = model.predict_action(**inputs, unnorm_key=args.unnorm_key, do_sample=False)
+            except ValueError as exc:
+                # Some OpenVLA variants do not implement proprio support and reject this kwarg.
+                if "model_kwargs" in str(exc) and "proprio" in str(exc):
+                    action = model.predict_action(**inputs, unnorm_key=args.unnorm_key, do_sample=False)
+                else:
+                    raise
 
-        return JSONResponse({"action": action.float().cpu().numpy().tolist()})
+        return JSONResponse({
+            "full_action_vector": action.tolist()
+        })
     except Exception:
         logging.error(traceback.format_exc())
         return JSONResponse({"error": "Internal server error"}, status_code=500)
