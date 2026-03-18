@@ -1,5 +1,2 @@
-type: standard
-summary: "XVLA Standard Interface"
-description: "FastAPI server interface exposing XVLA JSON payload contract"
 environment:
 - INTERFACE_SERVER=$COMPONENT/server.py

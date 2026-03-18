@@ -53,6 +53,7 @@ parts:
     source: components/xvla-server-interface
     organize:
       "*": "(component/xvla-server-interface)/"
+
   model-openvla-7b-shards:
     plugin: nil
     override-prime: |
@@ -153,7 +154,7 @@ parts:
       "server.sh": bin/
 
 apps:
-  openvla:
+  openvla-7b:
     command: bin/modelctl
     plugs:
       # For hardware detection

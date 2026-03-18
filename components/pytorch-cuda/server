@@ -11,4 +11,4 @@ fi
 exec "$SNAP_COMPONENTS/pytorch-cuda/bin/python3" "$INTERFACE_SERVER" \
   --model_path "$MODEL_FILE" \
   --port "$PORT" \
-  --device "cuda" \
+  --device "cuda"
