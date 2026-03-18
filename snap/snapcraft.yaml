@@ -19,7 +19,7 @@ environment:
 parts:
   cli:
     source: https://github.com/canonical/inference-snaps-cli.git
-    source-tag: v1.0.0-beta.24
+    source-tag: v1.0.0-beta.34
     plugin: go
     build-snaps:
       - go/1.24/stable
@@ -29,16 +29,29 @@ parts:
       - clinfo # for Intel GPU vRAM detection
     organize:
       bin/cli: bin/modelctl
-  component-local-files:
+  component-local-pytorch-cpu:
     plugin: dump
-    source: components
+    source: components/pytorch-cpu
     organize:
-      "pytorch-cpu": (component/pytorch-cpu)
-      "pytorch-cuda": (component/pytorch-cuda)
-      "fastapi-server-interface": (component/fastapi-server-interface)
-      "xvla-server-interface": (component/xvla-server-interface)
-    prime:
-      - -**/model-openvla-7b/**
+      "*": "(component/pytorch-cpu)/"
+
+  component-local-pytorch-cuda:
+    plugin: dump
+    source: components/pytorch-cuda
+    organize:
+      "*": "(component/pytorch-cuda)/"
+
+  component-local-fastapi-server-interface:
+    plugin: dump
+    source: components/fastapi-server-interface
+    organize:
+      "*": "(component/fastapi-server-interface)/"
+
+  component-local-xvla-server-interface:
+    plugin: dump
+    source: components/xvla-server-interface
+    organize:
+      "*": "(component/xvla-server-interface)/"
   model-openvla-7b-shards:
     plugin: nil
     override-prime: |
