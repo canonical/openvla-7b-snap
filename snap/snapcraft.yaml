@@ -29,6 +29,7 @@ parts:
       - clinfo # for Intel GPU vRAM detection
     organize:
       bin/cli: bin/modelctl
+
   component-local-pytorch-cpu:
     plugin: dump
     source: components/pytorch-cpu
@@ -90,11 +91,13 @@ parts:
           echo "# No config" > "$shard_prime/component.yaml"
         fi
       done
+
   pytorch-runtime-cpu:
     plugin: python
-    source: .
+    source: components/pytorch-cpu
     build-environment:
       - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+      - PIP_NO_CACHE_DIR: "1"
     python-packages:
       - torch>=2.2.0
       - torchvision>=0.16.0
@@ -112,11 +115,13 @@ parts:
       - libgomp1
     organize:
       "*": "(component/pytorch-cpu)/"
+
   pytorch-runtime-cuda:
     plugin: python
-    source: .
+    source: components/pytorch-cuda
     build-environment:
       - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu130
+      - PIP_NO_CACHE_DIR: "1"
     python-packages:
       - torch>=2.2.0
       - torchvision>=0.16.0
