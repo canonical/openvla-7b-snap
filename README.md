@@ -19,7 +19,7 @@ openvla-7b --help
 Clone the repository:
 
 ```shell
-git clone --recurse-submodules https://github.com/canonical/openvla-7b-snap.git
+git clone https://github.com/canonical/openvla-7b-snap.git
 cd openvla-7b-snap
 ```
 
