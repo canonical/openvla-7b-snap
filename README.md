@@ -72,7 +72,7 @@ Use this when running a `*-fastapi` engine.
 ```shell
 curl -X POST "http://localhost:9090/act" \
   -F "text=pick up the blue block" \
-  -F "image=@lego_on_table.png"
+  -F "image=@/path/to/image.png"
 ```
 
 ### XVLA JSON interface
@@ -83,7 +83,7 @@ Use this when running a `*-xvla` engine.
 python3 test_vla.py \
   --url http://localhost:9090/act \
   --interface xvla \
-  --image lego_on_table.png \
+  --image /path/to/image.png \
   --prompt "pick up the blue block"
 ```
 
