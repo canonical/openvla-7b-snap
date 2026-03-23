@@ -1,0 +1,2 @@
+environment:
+- INTERFACE_SERVER=$COMPONENT/server.py

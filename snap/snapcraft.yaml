@@ -1,0 +1,216 @@
+name: openvla-7b
+base: core24
+version: 'v1'
+summary: openvla-7b inference snap
+description: |
+   This snap installs an optimized environment for inference with the openvla-7b model.
+
+grade: devel
+confinement: strict
+
+compression: lzo
+
+environment:
+  # Set path to snap components
+  SNAP_COMPONENTS: /snap/$SNAP_INSTANCE_NAME/components/$SNAP_REVISION
+  # To find shared libraries that are staged and moved to components
+  ARCH_TRIPLET: $CRAFT_ARCH_TRIPLET_BUILD_FOR
+
+parts:
+  cli:
+    source: https://github.com/canonical/inference-snaps-cli.git
+    source-tag: v1.0.0-beta.34
+    plugin: go
+    build-snaps:
+      - go/1.24/stable
+    stage-packages:
+      - pciutils
+      - nvidia-utils-580 # for Nvidia vRAM and Cuda Capability detection
+      - clinfo # for Intel GPU vRAM detection
+    organize:
+      bin/cli: bin/modelctl
+
+  component-local-pytorch-cpu:
+    plugin: dump
+    source: components/pytorch-cpu
+    organize:
+      "*": "(component/pytorch-cpu)/"
+
+  component-local-pytorch-cuda:
+    plugin: dump
+    source: components/pytorch-cuda
+    organize:
+      "*": "(component/pytorch-cuda)/"
+
+  component-local-fastapi-server-interface:
+    plugin: dump
+    source: components/fastapi-server-interface
+    organize:
+      "*": "(component/fastapi-server-interface)/"
+
+  component-local-xvla-server-interface:
+    plugin: dump
+    source: components/xvla-server-interface
+    organize:
+      "*": "(component/xvla-server-interface)/"
+
+  model-openvla-7b-shards:
+    plugin: nil
+    override-prime: |
+      set -eux
+      MODEL_PROJ_DIR="$CRAFT_PROJECT_DIR/components/model-openvla-7b"
+      MODEL_FILES_DIR="$MODEL_PROJ_DIR/openvla-7b"
+
+      # Bypassing the usual part lifecycle saves disk space and time when
+      # dealing with large files. Copy each safetensor shard directly from
+      # the project into its own component's prime directory.
+      for i in 1 2 3 4; do
+        target_var="CRAFT_COMPONENT_MODEL_OPENVLA_7B_SHARD_${i}_OF_4_PRIME"
+        shard_prime="${!target_var}"
+        mkdir -p "$shard_prime/openvla-7b"
+
+        # Copy this shard's safetensor file
+        cp -v "$MODEL_FILES_DIR/model-0000${i}-of-00004.safetensors" "$shard_prime/openvla-7b/"
+
+        if [ "$i" -eq 1 ]; then
+          # Shard 1 gets the real component.yaml (sets MODEL_FILE)
+          cp -v "$MODEL_PROJ_DIR/component.yaml" "$shard_prime/component.yaml"
+          # Shard 1 also gets the init script used by engine servers
+          cp -v "$MODEL_PROJ_DIR/init" "$shard_prime/init"
+          chmod +x "$shard_prime/init"
+          # And all non-safetensor model files (config, tokenizer, index, etc.)
+          for f in "$MODEL_FILES_DIR"/*; do
+            if [ -f "$f" ]; then
+              case "$f" in
+                *.safetensors) ;;
+                *) cp -v "$f" "$shard_prime/openvla-7b/" ;;
+              esac
+            fi
+          done
+        else
+          # Each component must include a component.yaml; create a minimal one
+          echo "# No config" > "$shard_prime/component.yaml"
+        fi
+      done
+
+  pytorch-runtime-cpu:
+    plugin: python
+    source: components/pytorch-cpu
+    build-environment:
+      - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+      - PIP_NO_CACHE_DIR: "1"
+    python-packages:
+      - torch>=2.2.0
+      - torchvision>=0.16.0
+      - transformers==4.40.1
+      - timm==0.9.10
+      - tokenizers==0.19.1
+      - fastapi
+      - uvicorn
+      - pillow
+      - accelerate
+      - python-multipart
+      - json-numpy
+    # Ensure we have the base C++ libraries for math
+    stage-packages:
+      - libgomp1
+    organize:
+      "*": "(component/pytorch-cpu)/"
+
+  pytorch-runtime-cuda:
+    plugin: python
+    source: components/pytorch-cuda
+    build-environment:
+      - PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu130
+      - PIP_NO_CACHE_DIR: "1"
+    python-packages:
+      - torch>=2.2.0
+      - torchvision>=0.16.0
+      - transformers==4.40.1
+      - timm==0.9.10
+      - tokenizers==0.19.1
+      - fastapi
+      - uvicorn
+      - pillow
+      - accelerate
+      - python-multipart
+      - json-numpy
+    # Ensure we have the base C++ libraries for math
+    stage-packages:
+      - libgomp1
+    organize:
+      "*": "(component/pytorch-cuda)/"
+  engines:
+    source: engines
+    plugin: dump
+    organize:
+      "*": engines/
+  scripts:
+    source: scripts
+    plugin: dump
+    stage-packages:
+      - jq 
+    organize:
+      "server.sh": bin/
+
+apps:
+  openvla-7b:
+    command: bin/modelctl
+    plugs:
+      # For hardware detection
+      - hardware-observe
+      - opengl
+      # To access server over network socket
+      - network
+  server:
+    command: bin/server.sh
+    daemon: simple
+    plugs:
+      # Needed for server app
+      - network
+      - network-bind
+      # For inference and when running some modelctl commands
+      - hardware-observe
+      - opengl
+
+components:
+  model-openvla-7b-shard-1-of-4: &model-openvla-7b
+    type: standard
+    summary: OpenVLA 7B model weights (shard 1 of 4)
+    description: OpenVLA model with 7B parameters in safetensor format (shard 1 of 4,
+      includes all config and tokenizer files)
+
+  model-openvla-7b-shard-2-of-4:
+    <<: *model-openvla-7b
+    summary: OpenVLA 7B model weights (shard 2 of 4)
+    description: OpenVLA model with 7B parameters in safetensor format (shard 2 of 4)
+
+  model-openvla-7b-shard-3-of-4:
+    <<: *model-openvla-7b
+    summary: OpenVLA 7B model weights (shard 3 of 4)
+    description: OpenVLA model with 7B parameters in safetensor format (shard 3 of 4)
+
+  model-openvla-7b-shard-4-of-4:
+    <<: *model-openvla-7b
+    summary: OpenVLA 7B model weights (shard 4 of 4)
+    description: OpenVLA model with 7B parameters in safetensor format (shard 4 of 4)
+
+  pytorch-cpu:
+    type: standard
+    summary: PyTorch CPU runtime
+    description: Inference runtime for OpenVLA using PyTorch (CPU-only)
+
+  pytorch-cuda:
+    type: standard
+    summary: PyTorch CUDA runtime
+    description: Inference runtime for OpenVLA using PyTorch (CUDA)
+
+  fastapi-server-interface:
+    type: standard
+    summary: FastAPI Server Interface
+    description: FastAPI server interface for OpenVLA inference runtime using PyTorch
+
+  xvla-server-interface:
+    type: standard
+    summary: XVLA Standard Interface
+    description: FastAPI server interface exposing XVLA JSON payload contract

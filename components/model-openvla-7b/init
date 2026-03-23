@@ -1,0 +1,24 @@
+#!/bin/bash -eu
+
+# Create symbolic links to model shards found in individual component
+# subdirectories, flattened into a single /tmp directory so that
+# transformers' from_pretrained() can find all files in one place.
+SHARD_DIR="/tmp/openvla-7b-shards"
+[ -d "$SHARD_DIR" ] && rm -r "$SHARD_DIR"
+mkdir -p "$SHARD_DIR"
+
+# Symlink all non-safetensor files from shard 1 (config, tokenizer, index, etc.)
+for f in "$SNAP_COMPONENTS/model-openvla-7b-shard-1-of-4/openvla-7b"/*; do
+    [ -f "$f" ] || continue
+    case "$f" in
+        *.safetensors) ;;
+        *) ln -s "$f" "$SHARD_DIR/$(basename "$f")" ;;
+    esac
+done
+
+# Symlink each shard's safetensor file
+for i in 1 2 3 4; do
+    SHARD_NUM=$(printf "%05d" $i)
+    SHARD_FILE="model-${SHARD_NUM}-of-00004.safetensors"
+    ln -s "$SNAP_COMPONENTS/model-openvla-7b-shard-${i}-of-4/openvla-7b/$SHARD_FILE" "$SHARD_DIR/$SHARD_FILE"
+done

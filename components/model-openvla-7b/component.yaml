@@ -1,0 +1,5 @@
+environment:
+  # The model is split into 3 shards, each in its own component directory.
+  # The engine's server script calls init (from shard 1) at runtime to symlink
+  # all shards into /tmp/openvla-7b-shards/ so transformers can load from one path.
+  - MODEL_FILE=/tmp/openvla-7b-shards/

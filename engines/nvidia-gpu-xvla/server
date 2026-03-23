@@ -1,0 +1,5 @@
+#!/bin/bash -eux
+
+$SNAP_COMPONENTS/model-openvla-7b-shard-1-of-4/init
+
+exec "$SNAP_COMPONENTS/pytorch-cuda/server"
