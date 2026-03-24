@@ -66,8 +66,9 @@ engine: generic-cpu-xvla
 services:
     server: active
 endpoints:
-    xvla-server-interface: http://localhost:9090/act
+    xvla: http://localhost:9090/act
 ```
+
 
 ### FastAPI multipart interface
 
