@@ -1,2 +1,6 @@
+servers:
+  fastapi:
+    protocol: http
+    base-path: /act
 environment:
 - INTERFACE_SERVER=$COMPONENT/server.py

@@ -2,18 +2,6 @@
 
 This snap provides hardware-optimized inference for the [OpenVLA 7B](https://huggingface.co/openvla/openvla-7b) vision-language-action model.
 
-## Install from store
-
-```shell
-sudo snap install openvla-7b --edge
-```
-
-Show CLI help:
-
-```shell
-openvla-7b --help
-```
-
 ## Build from source
 
 Clone the repository:
@@ -34,6 +22,12 @@ Install local artifacts:
 ```shell
 sudo snap install --dangerous ./*.snap
 sudo snap install --dangerous ./*.comp
+```
+
+Show CLI help:
+
+```shell
+openvla-7b --help
 ```
 
 ## Engine selection
@@ -59,11 +53,22 @@ sudo openvla-7b use-engine nvidia-gpu-fastapi
 sudo openvla-7b use-engine nvidia-gpu-xvla
 ```
 
-Check daemon status:
+Check server status:
 
 ```shell
-sudo snap services openvla-7b
+openvla-7b status
 ```
+
+For instance, if the xvla server has been selected the status will look as follows:
+
+```shell
+engine: generic-cpu-xvla
+services:
+    server: active
+endpoints:
+    xvla: http://localhost:9090/act
+```
+
 
 ### FastAPI multipart interface
 
